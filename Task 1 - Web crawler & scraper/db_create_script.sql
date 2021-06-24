@@ -19,7 +19,7 @@ INSERT INTO tip_nekretnine (naziv) VALUES
 ('stan'),
 ('kuca');
 
-SELECT * FROM tip_nekretnine;
+-- SELECT * FROM tip_nekretnine;
 
 # Kreiranje tabele za grad i deo grada
 
@@ -36,6 +36,21 @@ CREATE TABLE deo_grada (
 	id INT AUTO_INCREMENT PRIMARY KEY,
     naziv VARCHAR(30)
 );
+
+# Kreiranje tabele za klasu izgradnje
+
+DROP TABLE IF EXISTS klasa_izgradnje;
+
+CREATE TABLE klasa_izgradnje (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    naziv VARCHAR(30)
+);
+
+INSERT INTO klasa_izgradnje (naziv) VALUES
+('novogradnja'),
+('starogradnja');
+
+-- SELECT * FROM klasa_izgradnje;
 
 # Kreiranje tabele za tip grejanja
 
@@ -59,6 +74,7 @@ CREATE TABLE nekretnine (
     deo_grada_id INT NULL, # id dela grada
     kvadratura DOUBLE NULL,
     godina_izgradnje INT NULL,
+    klasa_id INT NULL, # id klase izgradnje (novogradnja, starogradnja, itd.)
     povrsina_zemljista DOUBLE NULL, # samo za kuce
     ukupna_spratnost INT NULL,
     sprat INT NULL, # samo za stanove
@@ -77,6 +93,9 @@ CREATE TABLE nekretnine (
         ON UPDATE RESTRICT ON DELETE CASCADE,
     FOREIGN KEY (deo_grada_id)
 		REFERENCES deo_grada (id)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    FOREIGN KEY (klasa_id)
+		REFERENCES klasa_izgradnje (id)
         ON UPDATE RESTRICT ON DELETE CASCADE,
     FOREIGN KEY (tip_grejanja_id)
 		REFERENCES tip_grejanja (id)
