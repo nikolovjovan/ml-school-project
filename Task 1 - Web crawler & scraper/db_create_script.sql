@@ -27,14 +27,14 @@ DROP TABLE IF EXISTS grad;
 
 CREATE TABLE grad (
 	id INT AUTO_INCREMENT PRIMARY KEY,
-    naziv VARCHAR(30)
+    naziv VARCHAR(100)
 );
 
 DROP TABLE IF EXISTS deo_grada;
 
 CREATE TABLE deo_grada (
 	id INT AUTO_INCREMENT PRIMARY KEY,
-    naziv VARCHAR(30)
+    naziv VARCHAR(100)
 );
 
 # Kreiranje tabele za klasu izgradnje
@@ -58,7 +58,7 @@ DROP TABLE IF EXISTS tip_grejanja;
 
 CREATE TABLE tip_grejanja (
 	id INT AUTO_INCREMENT PRIMARY KEY,
-    naziv VARCHAR(20)
+    naziv VARCHAR(200)
 );
 
 # Kreiranje glavne tabele za nekretnine

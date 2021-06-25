@@ -19,10 +19,6 @@ class NekretnineRsSpider(CrawlSpider):
         Rule(LinkExtractor(restrict_css='.offer-title > a'), callback='parse_details_page')
     )
 
-    # TODO: REMOVE THIS!!!
-    def start_requests(self):
-        yield Request('https://www.nekretnine.rs/stambeni-objekti/stanovi/vlasnik-karaburma-25m2-lep-stan-na-drugom-spratu/NkmsNf5e5tN/', callback=self.parse_details_page)
-
     def parse_details_page(self, response):
         self.log(response)
         l = NekretninaLoader(response=response)
@@ -47,8 +43,9 @@ class NekretnineRsSpider(CrawlSpider):
 
         # Cena nekretnine: prodajna odnosno cena iznajmljivanja
         #
-        cena = response.css('.stickyBox__price::text').get()
-        l.add_value('cena', None if res is None else float(cena[0:cena.index(' EUR')].replace(' ', '')))
+        res = response.css('.stickyBox__price::text').get()
+        idx = res.find(' EUR')
+        l.add_value('cena', None if res is None else -1 if idx == -1 else float(res[0:idx].replace(' ', '')))
 
         # Lokacija: grad i deo grada gde se lokacija nalazi
         #
