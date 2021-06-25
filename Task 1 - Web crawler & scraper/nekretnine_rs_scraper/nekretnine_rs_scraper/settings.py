@@ -64,10 +64,25 @@ DEFAULT_REQUEST_HEADERS = {
 #    'scrapy.extensions.telnet.TelnetConsole': None,
 #}
 
+# PyMySqlPipeline params
+#
+PYMYSQL_PARAMS = {
+    'host': 'localhost',
+    'port': 3306,
+    'user': 'root',
+    'pass': '',
+    'db': 'nekretnine',
+    'table': 'nekretnina',
+    'retries': 3,
+    'close_on_error': True,
+    'charset': 'utf8',
+    'upsert': True
+}
+
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'nekretnine_rs_scraper.pipelines.TestPipeline': 300,
+   'nekretnine_rs_scraper.pipelines.PyMySqlPipeline': 300
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

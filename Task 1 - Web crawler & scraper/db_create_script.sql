@@ -63,9 +63,9 @@ CREATE TABLE tip_grejanja (
 
 # Kreiranje glavne tabele za nekretnine
 
-DROP TABLE IF EXISTS nekretnine;
+DROP TABLE IF EXISTS nekretnina;
 
-CREATE TABLE nekretnine (
+CREATE TABLE nekretnina (
 	id VARCHAR(20) PRIMARY KEY, # id nekretnine (unikatan niz znakova i cifara na sajtu nekretnine.rs cijim se koriscenjem moze rekreirati link)
     tip_id INT NOT NULL, # id tipa nekretnine -> 1 ili 2 u zavisnosti od toga da li je stan ili kuca u pitanju
     prodaja BOOL NOT NULL, # true ako je prodaja, false ako je iznajmljivanje
@@ -75,7 +75,7 @@ CREATE TABLE nekretnine (
     kvadratura DOUBLE NULL,
     godina_izgradnje INT NULL,
     klasa_id INT NULL, # id klase izgradnje (novogradnja, starogradnja, itd.)
-    povrsina_zemljista DOUBLE NULL, # samo za kuce
+    povrsina_zemljista DOUBLE NULL, # samo za kuce (jedinica: ar [1 ar = 100 m^2])
     ukupna_spratnost INT NULL,
     sprat INT NULL, # samo za stanove
 	uknjizenost BOOL NULL, # true ako je uknjizen, false ako nije uknjizen
