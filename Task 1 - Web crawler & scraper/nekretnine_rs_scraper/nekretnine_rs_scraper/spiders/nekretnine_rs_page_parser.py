@@ -9,7 +9,7 @@ class NekretnineRsPageParserSpider(Spider):
     allowed_domains = ['nekretnine.rs']
 
     def start_requests(self):
-        link_list_path = self.settings('LINK_LIST_PATH', None)
+        link_list_path = self.settings.get('LINK_LIST_PATH', None)
         if link_list_path is not None:
             with codecs.open(link_list_path, 'r', encoding='utf8') as f:
                 link_list = [line.strip() for line in f if line.strip()]
