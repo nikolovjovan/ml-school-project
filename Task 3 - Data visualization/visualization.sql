@@ -11,6 +11,15 @@ GROUP BY deo_grada_id
 ORDER BY COUNT(*) DESC
 LIMIT 10;
 
+SELECT COUNT(*) AS 'Broj nekretnina u ponudi'
+FROM nekretnina AS n INNER JOIN deo_grada AS dg ON n.deo_grada_id = dg.id
+WHERE grad_id = (SELECT id
+				 FROM grad
+                 WHERE naziv = 'Beograd') AND
+	deo_grada_id IN (SELECT id
+					 FROM deo_grada
+					 WHERE naziv LIKE 'Novi Beograd%');
+
 -- Zadatak 3.b) Broj stanova za prodaju prema kvadraturi
 
 DROP FUNCTION IF EXISTS `broj_stanova_sa_kvadraturom_u_opsegu`;
@@ -204,11 +213,11 @@ END$$
 
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS `broj_i_odnos_prodaja_po_ceni`;
+DROP PROCEDURE IF EXISTS `broj_i_udeo_prodaja_po_ceni`;
 
 DELIMITER $$
 
-CREATE PROCEDURE `broj_i_odnos_prodaja_po_ceni` ()
+CREATE PROCEDURE `broj_i_udeo_prodaja_po_ceni` ()
 BEGIN
 	DECLARE price_1 INT;
     DECLARE price_2 INT;
@@ -236,26 +245,28 @@ BEGIN
 
 	SELECT
 		price_1 AS '(0, 49999] EUR',
-        (price_1 / sum) * 100 AS 'Odnos [%]',
+        (price_1 / sum) * 100 AS 'Udeo [%]',
 		price_2 AS '[50000, 99999] EUR',
-        (price_2 / sum) * 100 AS 'Odnos [%]',
+        (price_2 / sum) * 100 AS 'Udeo [%]',
 		price_3 AS '[100000, 149999] EUR',
-        (price_3 / sum) * 100 AS 'Odnos [%]',
+        (price_3 / sum) * 100 AS 'Udeo [%]',
 		price_4 AS '[150000, 199999] EUR',
-        (price_4 / sum) * 100 AS 'Odnos [%]',
+        (price_4 / sum) * 100 AS 'Udeo [%]',
 		price_5 AS '[200000, 249999] EUR',
-        (price_5 / sum) * 100 AS 'Odnos [%]';
+        (price_5 / sum) * 100 AS 'Udeo [%]';
 END $$
 
 DELIMITER ;
 
-CALL broj_i_odnos_prodaja_po_ceni;
+CALL broj_i_udeo_prodaja_po_ceni;
 
 -- Zadatak 3.f) Broj nekretnina za prodaju u Beogradu koje imaju parking, u odnosu na ukupan broj nekretnina za prodaju u Beogradu
 
+DROP PROCEDURE IF EXISTS `broj_i_udeo_nekretnina_u_Beogradu_sa_parkingom`;
+
 DELIMITER $$
 
-CREATE PROCEDURE `broj_i_odnos_nekretnina_u_Beogradu_sa_parkingom` ()
+CREATE PROCEDURE `broj_i_udeo_nekretnina_u_Beogradu_sa_parkingom` ()
 BEGIN
 	DECLARE broj_nekretnina_sa_parkingom INT;
     DECLARE ukupan_broj_nekretnina INT;
@@ -273,9 +284,9 @@ BEGIN
 	SELECT
 		broj_nekretnina_sa_parkingom AS 'Broj nekretnina sa parkingom u Beogradu',
         ukupan_broj_nekretnina AS 'Ukupan broj nekretnina u Beogradu',
-        (broj_nekretnina_sa_parkingom / ukupan_broj_nekretnina) * 100 AS 'Odnos [%]';
+        (broj_nekretnina_sa_parkingom / ukupan_broj_nekretnina) * 100 AS 'Udeo [%]';
 END $$
 
 DELIMITER ;
 
-CALL broj_i_odnos_nekretnina_u_Beogradu_sa_parkingom;
+CALL broj_i_udeo_nekretnina_u_Beogradu_sa_parkingom;
