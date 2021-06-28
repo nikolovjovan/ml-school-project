@@ -6,6 +6,7 @@ class Nekretnina(Item):
     tip = Field()
     prodaja = Field()
     cena = Field()
+    drzava = Field()
     grad = Field()
     deo_grada = Field()
     kvadratura = Field()

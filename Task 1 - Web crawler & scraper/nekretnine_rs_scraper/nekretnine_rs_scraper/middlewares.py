@@ -59,13 +59,13 @@ class RotateProxyRetryMiddleware(RetryMiddleware):
         # handle http status redirect
         url = response.url
         if response.status in [301, 307]:
-            logger.info("trying to redirect us: %s" %url, level=log.INFO)
+            logger.info("trying to redirect us: %s" %url)
             reason = 'redirect %d' %response.status
             return self.rotate_proxy(self._retry(request, reason, spider)) or response
         # handle meta redirect
         interval, redirect_url = get_meta_refresh(response)
         if redirect_url:
-            logger.info("trying to redirect us: %s" %url, level=log.INFO)
+            logger.info("trying to redirect us: %s" %url)
             reason = 'meta'
             return self.rotate_proxy(self._retry(request, reason, spider)) or response
         return response

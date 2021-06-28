@@ -128,6 +128,7 @@ class PyMySqlPipeline:
             sqlItem['tip_id'] = self._get_key_id(tx, 'tip_nekretnine', adapter, 'tip')
             sqlItem['prodaja'] = self._get_key_value(adapter, 'prodaja')
             sqlItem['cena'] = self._get_key_value(adapter, 'cena')
+            sqlItem['drzava_id'] = self._get_key_id(tx, 'drzava', adapter, 'drzava')
             sqlItem['grad_id'] = self._get_key_id(tx, 'grad', adapter, 'grad')
             sqlItem['deo_grada_id'] = self._get_key_id(tx, 'deo_grada', adapter, 'deo_grada')
             sqlItem['kvadratura'] = self._get_key_value(adapter, 'kvadratura')

@@ -21,7 +21,14 @@ INSERT INTO tip_nekretnine (naziv) VALUES
 
 -- SELECT * FROM tip_nekretnine;
 
-# Kreiranje tabele za grad i deo grada
+# Kreiranje tabele za drzavu, grad i deo grada
+
+DROP TABLE IF EXISTS drzava;
+
+CREATE TABLE drzava (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    naziv VARCHAR(100)
+);
 
 DROP TABLE IF EXISTS grad;
 
@@ -70,6 +77,7 @@ CREATE TABLE nekretnina (
     tip_id INT NOT NULL, # id tipa nekretnine -> 1 ili 2 u zavisnosti od toga da li je stan ili kuca u pitanju
     prodaja BOOL NOT NULL, # true ako je prodaja, false ako je iznajmljivanje
     cena DOUBLE NOT NULL, # cena izrazena u EUR
+    drzava_id INT NULL, # id drzave
 	grad_id INT NULL, # id grada
     deo_grada_id INT NULL, # id dela grada
     kvadratura DOUBLE NULL,
@@ -87,6 +95,9 @@ CREATE TABLE nekretnina (
     terasa BOOL NULL, # true ako ima terasu/lodju/balkon, false ako nema
 	FOREIGN KEY (tip_id)
 		REFERENCES tip_nekretnine (id)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    FOREIGN KEY (drzava_id)
+		REFERENCES drzava (id)
         ON UPDATE RESTRICT ON DELETE CASCADE,
     FOREIGN KEY (grad_id)
 		REFERENCES grad (id)

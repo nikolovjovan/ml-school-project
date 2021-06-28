@@ -19,4 +19,7 @@ class NekretnineRsPageParserSpider(Spider):
             yield Request(link, dont_filter=True)
 
     def parse(self, response):
-        return parse_ad(response)
+        nekretnina = parse_ad(response)
+        if nekretnina['drzava'][0] != 'Srbija':
+            self.logger.critical(f"Oglas {response.url} (id = {nekretnina['id']}) nije iz Srbije vec iz: {nekretnina['drzava']}\n")
+        return nekretnina

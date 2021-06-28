@@ -28,13 +28,16 @@ def parse_ad(response):
     idx = res.find(' EUR')
     l.add_value('cena', None if res is None else -1 if idx == -1 else float(res[0:idx].replace(' ', '')))
 
-    # Lokacija: grad i deo grada gde se lokacija nalazi
+    # Lokacija: drzava, grad i deo grada gde se lokacija nalazi
     #
     location_selector = response.xpath('//div[@class="property__location"]/ul')
     if location_selector is None:
+        l.add_value('drzava', None)
         l.add_value('grad', None)
         l.add_value('deo_grada', None)
     else:
+        res = location_selector.xpath('li[1]/text()')
+        l.add_value('drzava', None if res is None else res.get())
         res = location_selector.xpath('li[3]/text()')
         l.add_value('grad', None if res is None else res.get())
         res = location_selector.xpath('li[4]/text()')
