@@ -15,7 +15,8 @@ SELECT
 SELECT g.naziv AS Grad, COUNT(*) AS BrojNekretninaZaProdaju
 FROM nekretnina AS n INNER JOIN grad AS g ON n.grad_id = g.id
 WHERE prodaja = TRUE
-GROUP BY n.grad_id;
+GROUP BY n.grad_id
+ORDER BY COUNT(*) DESC;
 
 -- Zadatak 2.c) Broj uknjizenih i neuknjizenih kuca tj. stanova
 
@@ -47,7 +48,7 @@ SELECT id as Identifikator, cena as Cena
 FROM nekretnina
 WHERE tip_id = (SELECT id
 				FROM tip_nekretnine
-				WHERE naziv = 'kuca')
+				WHERE naziv = 'kuca') AND prodaja = TRUE
 ORDER BY cena DESC
 LIMIT 30;
 
@@ -55,7 +56,7 @@ SELECT id as Identifikator, cena as Cena
 FROM nekretnina
 WHERE tip_id = (SELECT id
 				FROM tip_nekretnine
-				WHERE naziv = 'stan')
+				WHERE naziv = 'stan') AND prodaja = TRUE
 ORDER BY cena DESC
 LIMIT 30;
 
