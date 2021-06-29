@@ -53,10 +53,6 @@ CREATE TABLE klasa_izgradnje (
     naziv VARCHAR(30)
 );
 
-INSERT INTO klasa_izgradnje (naziv) VALUES
-('novogradnja'),
-('starogradnja');
-
 -- SELECT * FROM klasa_izgradnje;
 
 # Kreiranje tabele za tip grejanja
@@ -82,7 +78,7 @@ CREATE TABLE nekretnina (
     deo_grada_id INT NULL, # id dela grada
     kvadratura DOUBLE NULL,
     godina_izgradnje INT NULL,
-    klasa_id INT NULL, # id klase izgradnje (novogradnja, starogradnja, itd.)
+    klasa_id INT NULL, # id klase izgradnje
     povrsina_zemljista DOUBLE NULL, # samo za kuce (jedinica: ar [1 ar = 100 m^2])
     ukupna_spratnost INT NULL,
     sprat INT NULL, # samo za stanove

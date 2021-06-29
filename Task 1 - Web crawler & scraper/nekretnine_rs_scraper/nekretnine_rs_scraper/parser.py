@@ -1,5 +1,11 @@
-from nekretnine_rs_scraper.items import NekretninaLoader
+from nekretnine_rs_scraper.items import NekretninaLoader, UdaljenostLoader
+from geopy.geocoders import Nominatim, ArcGIS
+from geopy.distance import geodesic
 import re
+
+# Sredina ulice Knez Mihajlova
+
+belgrade = (44.8178131, 20.4568974)
 
 def parse_ad(response):
     l = NekretninaLoader(response=response)
@@ -112,5 +118,77 @@ def parse_ad(response):
     #
     res = re.search('(Terasa|Lođa|Balkon)', detalji)
     l.add_value('terasa', res is not None)
+
+    return l.load_item()
+
+def parse_and_calculate_distance(response):
+    l = UdaljenostLoader(response=response)
+
+    # Id nekretnine: jedinstveni niz alphanumerickih karaktera
+    #
+    res = re.search('^.*/stambeni-objekti/(stanovi|kuce)/[^/]*/([^/]*).*$', response.url)
+    l.add_value('id', '' if res is None else res.group(2))
+
+    lat = -1
+    lng = -1
+    search_text = ''
+
+    script_selector = response.xpath('//script/text()')
+    if script_selector is not None:
+        scripts = script_selector.getall()
+        for script in scripts:
+            res = re.search('ppLat\s+=\s+([\d\.]+)', script)
+            if res is not None:
+                lat = float(res.group(1))
+            res = re.search('ppLng\s+=\s+([\d\.]+)', script)
+            if res is not None:
+                lng = float(res.group(1))
+                break
+
+    distance = -1
+
+    if lat != -1 and lng != -1:
+        # print('Latitude:', lat, 'Longitude:', lng)
+        distance = geodesic(belgrade, (lat, lng)).km
+    else:
+        location_selector = response.xpath('//div[@class="property__location"]/ul')
+
+        if location_selector is not None:
+            location_list = location_selector.xpath('li/text()').getall()
+            if location_list is None:
+                location_list = []
+            cnt = len(location_list)
+            i = cnt - 3
+            if i < 0:
+                i = 0
+            while i < cnt:
+                search_text += location_list[i] + ' '
+                i += 1
+            # print('Search text:', search_text)
+
+        if not search_text:
+            l.add_value('udaljenost', -1)
+            return l.load_item()
+
+        # Try get location using Nominatim
+
+        geolocator = Nominatim(user_agent='nekretnine_rs_scraper')
+        location_nominatim = geolocator.geocode(search_text)
+        if location_nominatim is not None:
+            # print('Nominatim:', location_nominatim.latitude, location_nominatim.longitude)
+            distance = geodesic(belgrade, (location_nominatim.latitude, location_nominatim.longitude)).km
+            # print('Distance Nominatim:', distance)
+        else:
+            # Try get location using ArcGIS
+            geolocator = ArcGIS(user_agent='nekretnine_rs_scraper')
+            location_arcgis = geolocator.geocode(search_text)
+            if location_arcgis is not None:
+                # print('ArcGIS:', location_arcgis.latitude, location_nominatim.longitude)
+                distance = geodesic(belgrade, (location_arcgis.latitude, location_arcgis.longitude)).km
+                # print('Distance ArcGIS:', distance)
+            else:
+                print(f'Failed to get location using both Nominatim and ArcGIS! Search text: "{search_text}"')
+
+    l.add_value('udaljenost', distance)
 
     return l.load_item()

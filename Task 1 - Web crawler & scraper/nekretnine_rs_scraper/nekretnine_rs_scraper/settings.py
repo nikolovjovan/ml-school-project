@@ -52,6 +52,10 @@ PROXY_LIST_PATH = os.path.dirname(os.path.abspath(__file__)) + '\proxies.txt'
 
 LINK_LIST_PATH = os.path.dirname(os.path.abspath(__file__)) + '\links_to_parse.txt'
 
+ID_LIST_PATH = os.path.dirname(os.path.abspath(__file__)) + '\ids_to_calculate_distance.txt'
+
+SUBSET_LIST_PATH = os.path.dirname(os.path.abspath(__file__)) + '\subset_links.txt'
+
 ITEM_PIPELINES = {
    'nekretnine_rs_scraper.pipelines.PyMySqlPipeline': 300
 }

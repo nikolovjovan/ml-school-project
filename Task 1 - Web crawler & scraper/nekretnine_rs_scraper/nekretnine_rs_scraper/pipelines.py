@@ -4,6 +4,8 @@ import logging
 import pprint
 
 from itemadapter import is_item, ItemAdapter
+from nekretnine_rs_scraper.items import Nekretnina
+
 import pymysql
 
 from pymysql.cursors import DictCursor
@@ -99,7 +101,7 @@ class PyMySqlPipeline:
     def _get_key_id(self, tx, tblname, adapter, keyname):
         return self._get_id(tx, tblname, adapter[keyname][0]) if keyname in adapter else None
 
-    def _generate_sql(self, data):
+    def _generate_insert_sql(self, data):
         columns = lambda d: ', '.join(['`{}`'.format(k) for k in d])
         placeholders = lambda d: ', '.join(['%s'] * len(d))
         values = lambda d: [v for v in d.values()]
@@ -120,33 +122,44 @@ class PyMySqlPipeline:
                 values(data)
             )
 
+    def _generate_update_sql(self, data):
+        sql_template = 'UPDATE `{}` SET udaljenost = {} WHERE id = "{}"'
+        return sql_template.format(self.table, data['udaljenost'], data['id'])
+
     def _process_item(self, tx, item):
         if (is_item(item)):
             adapter = ItemAdapter(item)
             sqlItem = dict()
             sqlItem['id'] = self._get_key_value(adapter, 'id')
-            sqlItem['tip_id'] = self._get_key_id(tx, 'tip_nekretnine', adapter, 'tip')
-            sqlItem['prodaja'] = self._get_key_value(adapter, 'prodaja')
-            sqlItem['cena'] = self._get_key_value(adapter, 'cena')
-            sqlItem['drzava_id'] = self._get_key_id(tx, 'drzava', adapter, 'drzava')
-            sqlItem['grad_id'] = self._get_key_id(tx, 'grad', adapter, 'grad')
-            sqlItem['deo_grada_id'] = self._get_key_id(tx, 'deo_grada', adapter, 'deo_grada')
-            sqlItem['kvadratura'] = self._get_key_value(adapter, 'kvadratura')
-            sqlItem['godina_izgradnje'] = self._get_key_value(adapter, 'godina_izgradnje')
-            sqlItem['klasa_id'] = self._get_key_id(tx, 'klasa_izgradnje', adapter, 'klasa')
-            sqlItem['povrsina_zemljista'] = self._get_key_value(adapter, 'povrsina_zemljista')
-            sqlItem['ukupna_spratnost'] = self._get_key_value(adapter, 'ukupna_spratnost')
-            sqlItem['sprat'] = self._get_key_value(adapter, 'sprat')
-            sqlItem['uknjizenost'] = self._get_key_value(adapter, 'uknjizenost')
-            sqlItem['tip_grejanja_id'] = self._get_key_id(tx, 'tip_grejanja', adapter, 'tip_grejanja')
-            sqlItem['broj_soba'] = self._get_key_value(adapter, 'broj_soba')
-            sqlItem['broj_kupatila'] = self._get_key_value(adapter, 'broj_kupatila')
-            sqlItem['parking'] = self._get_key_value(adapter, 'parking')
-            sqlItem['lift'] = self._get_key_value(adapter, 'lift')
-            sqlItem['terasa'] = self._get_key_value(adapter, 'terasa')
-            sql, data = self._generate_sql(sqlItem)
+            if isinstance(item, Nekretnina):
+                sqlItem['tip_id'] = self._get_key_id(tx, 'tip_nekretnine', adapter, 'tip')
+                sqlItem['prodaja'] = self._get_key_value(adapter, 'prodaja')
+                sqlItem['cena'] = self._get_key_value(adapter, 'cena')
+                sqlItem['drzava_id'] = self._get_key_id(tx, 'drzava', adapter, 'drzava')
+                sqlItem['grad_id'] = self._get_key_id(tx, 'grad', adapter, 'grad')
+                sqlItem['deo_grada_id'] = self._get_key_id(tx, 'deo_grada', adapter, 'deo_grada')
+                sqlItem['kvadratura'] = self._get_key_value(adapter, 'kvadratura')
+                sqlItem['godina_izgradnje'] = self._get_key_value(adapter, 'godina_izgradnje')
+                sqlItem['klasa_id'] = self._get_key_id(tx, 'klasa_izgradnje', adapter, 'klasa')
+                sqlItem['povrsina_zemljista'] = self._get_key_value(adapter, 'povrsina_zemljista')
+                sqlItem['ukupna_spratnost'] = self._get_key_value(adapter, 'ukupna_spratnost')
+                sqlItem['sprat'] = self._get_key_value(adapter, 'sprat')
+                sqlItem['uknjizenost'] = self._get_key_value(adapter, 'uknjizenost')
+                sqlItem['tip_grejanja_id'] = self._get_key_id(tx, 'tip_grejanja', adapter, 'tip_grejanja')
+                sqlItem['broj_soba'] = self._get_key_value(adapter, 'broj_soba')
+                sqlItem['broj_kupatila'] = self._get_key_value(adapter, 'broj_kupatila')
+                sqlItem['parking'] = self._get_key_value(adapter, 'parking')
+                sqlItem['lift'] = self._get_key_value(adapter, 'lift')
+                sqlItem['terasa'] = self._get_key_value(adapter, 'terasa')
+                sql, data = self._generate_insert_sql(sqlItem)
+            else:
+                sqlItem['udaljenost'] = self._get_key_value(adapter, 'udaljenost')
+                sql = self._generate_update_sql(sqlItem)
             try:
-                tx.execute(sql, data)
+                if isinstance(item, Nekretnina):
+                    tx.execute(sql, data)
+                else:
+                    tx.execute(sql)
             except pymysql.err.IntegrityError:
                 # Duplicate entries are ignored...
                 #

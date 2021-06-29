@@ -25,3 +25,10 @@ class Nekretnina(Item):
 
 class NekretninaLoader(ItemLoader):
     default_item_class = Nekretnina
+
+class Udaljenost(Item):
+    id = Field()
+    udaljenost = Field()
+
+class UdaljenostLoader(ItemLoader):
+    default_item_class = Udaljenost
