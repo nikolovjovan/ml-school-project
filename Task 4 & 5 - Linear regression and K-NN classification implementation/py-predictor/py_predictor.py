@@ -1,7 +1,10 @@
 from tkinter import *
 from model import Oglas, import_data
-from linreg import predict_price
+from linreg import predict_price, iters, cost
 from knn import calculate_k, chebyshev, euclid, manhattan, most_probable_class, predict_class
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
 
 def create_oglas():
     oglas = Oglas()
@@ -28,7 +31,18 @@ def exec_lin_reg():
     verovatnocaframe.grid_remove()
     oglas = create_oglas()
     predvidjena_cena = predict_price(oglas)
-    rezultat.set(f"Predvidjena cena: {predvidjena_cena} EUR")
+    
+    fig = Figure(figsize = (6, 6))
+    ax = fig.add_subplot(111)
+    ax.plot(np.arange(iters), cost, 'r')
+    ax.set_xlabel('Iterations')
+    ax.set_ylabel('Cost')
+    ax.set_title('Error vs. Training Epoch')
+
+    canvas = FigureCanvasTkAgg(fig, master = window)
+    canvas.get_tk_widget().grid(column = 0, row = 5)
+
+    rezultat.set(f"Predvidjena cena: {predvidjena_cena:.2f} EUR")
     rezultatframe.grid()
 
 def get_dist_fn(dist_fn_name):

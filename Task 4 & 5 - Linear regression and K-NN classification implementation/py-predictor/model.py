@@ -1,5 +1,6 @@
 import pandas as pd
 import pymysql
+from pandas.core.frame import DataFrame
 from pymysql.cursors import DictCursor
 
 class Oglas:
@@ -10,7 +11,6 @@ class Oglas:
     spratnost: int
 
 nekretnine = pd.DataFrame()
-
 def import_data():
     global nekretnine
     if nekretnine.empty:
@@ -33,6 +33,26 @@ def get_data():
     if nekretnine.empty:
         import_data()
     return nekretnine
+
+def min_max(data: DataFrame):
+    return (data - data.min()) / (data.max() - data.min())
+
+def mean(data: DataFrame):
+    return (data - data.mean()) / (data.max() - data.min())
+
+def standardization(data: DataFrame):
+    return (data - data.mean()) / data.std()
+
+normalize_fn = standardization
+nekretnine_normalized = pd.DataFrame()
+
+def get_normalized_data(normalize = standardization):
+    global normalize_fn
+    global nekretnine_normalized
+    if nekretnine_normalized.empty or normalize_fn != normalize:
+        normalize_fn = normalize
+        nekretnine_normalized = normalize(get_data())
+    return nekretnine_normalized
 
 def oglas_from_row(row):
     oglas = Oglas()

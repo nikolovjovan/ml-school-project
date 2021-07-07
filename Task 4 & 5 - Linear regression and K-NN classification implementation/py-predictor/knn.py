@@ -9,10 +9,10 @@ from numpy import exp2, sqrt
 # 4: 200 000 EUR ili vise
 
 coef = Oglas()
-coef.udaljenost = 1.1
-coef.kvadratura = 0.3
+coef.udaljenost = 5.3
+coef.kvadratura = 0.6
 coef.starost = 0.7
-coef.broj_soba = 1.4
+coef.broj_soba = 1.3
 coef.spratnost = 0.5
 
 def calculate_k():
