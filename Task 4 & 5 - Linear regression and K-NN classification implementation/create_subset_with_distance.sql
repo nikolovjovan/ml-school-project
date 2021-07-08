@@ -32,8 +32,8 @@ BEGIN
 	# Ako je izgradnja planirana do 10 godina unapred, inace je najverovatnije greska
     IF starost < -10 OR starost > 150 THEN
 		SET starost = 150;
-	ELSE
-		RETURN starost;
+	ELSEIF starost != 150 THEN
+		RETURN starost; 
 	END IF;
 
 	IF klasa_id IS NOT NULL THEN
@@ -61,3 +61,16 @@ WHERE grad_id = (SELECT id FROM grad WHERE naziv = 'Beograd') AND prodaja = TRUE
 
 SELECT id
 FROM nekretnina_subset;
+
+# Eliminisanje/ispravljanje losih podataka (los oglas, lose parsiranje, itd.)
+
+DELETE FROM nekretnina_subset
+WHERE udaljenost > 20 OR kvadratura > 500;
+
+UPDATE nekretnina_subset
+SET broj_soba = 1
+WHERE broj_soba = 0; # oglasi vode broj soba kao 0.5 i onda parser to pretvori u int sa vrednoscu 0
+
+UPDATE nekretnina_subset
+SET spratnost = 0
+WHERE spratnost > 50; # oglasi sa prizemnim stanovima, iz nekog razloga sa ogromnom spratnoscu...
