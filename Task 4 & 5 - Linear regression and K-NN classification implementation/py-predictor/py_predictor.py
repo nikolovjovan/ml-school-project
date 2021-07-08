@@ -1,6 +1,7 @@
 from tkinter import *
 from model import Oglas, import_data
-from linreg import predict_price, iters, cost
+import linreg as lr
+from linreg import predict_price, iters
 from knn import calculate_k, chebyshev, euclid, manhattan, most_probable_class, predict_class
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -34,7 +35,7 @@ def exec_lin_reg():
     
     fig = Figure(figsize = (6, 6))
     ax = fig.add_subplot(111)
-    ax.plot(np.arange(iters), cost, 'r')
+    ax.plot(np.arange(iters), lr.cost, 'r')
     ax.set_xlabel('Iterations')
     ax.set_ylabel('Cost')
     ax.set_title('Error vs. Training Epoch')

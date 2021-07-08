@@ -1,6 +1,6 @@
+from tkinter.constants import NONE
 import pandas as pd
 import pymysql
-from pandas.core.frame import DataFrame
 from pymysql.cursors import DictCursor
 
 class Oglas:
@@ -34,27 +34,52 @@ def get_data():
         import_data()
     return nekretnine
 
-def min_max(data: DataFrame):
-    return (data - data.min()) / (data.max() - data.min())
+def min_max(data: pd.DataFrame):
+    return \
+        data.min(), \
+        data.max() - data.min(), \
+        (data - data.min()) / (data.max() - data.min())
 
-def mean(data: DataFrame):
-    return (data - data.mean()) / (data.max() - data.min())
+def max(data: pd.DataFrame):
+    return \
+        0.0, \
+        data.max(), \
+        data / data.max()
 
-def standardization(data: DataFrame):
-    return (data - data.mean()) / data.std()
+def mean(data: pd.DataFrame):
+    return \
+        data.mean(), \
+        data.max() - data.min(), \
+        (data - data.mean()) / (data.max() - data.min())
 
-normalize_fn = standardization
+def standardization(data: pd.DataFrame):
+    return \
+        data.mean(), \
+        data.std(), \
+        (data - data.mean()) / data.std()
+
+normalize_fn = min_max
 nekretnine_normalized = pd.DataFrame()
 
-def get_normalized_data(normalize = standardization):
+def get_normalized_data(normalize = min_max):
     global normalize_fn
     global nekretnine_normalized
     if nekretnine_normalized.empty or normalize_fn != normalize:
         normalize_fn = normalize
-        nekretnine_normalized = normalize(get_data())
+        _, _, nekretnine_normalized = normalize(get_data())
     return nekretnine_normalized
 
-def oglas_from_row(row):
+def get_normalized_input(oglas: Oglas, normalize = None):
+    global normalize_fn
+    if normalize is None:
+        normalize = normalize_fn
+    decrementor, divisor, _ = normalize(nekretnine)
+    series = series_from_oglas(oglas)
+    tmp = ((series - decrementor) / divisor).values
+    tmp[0] = 1
+    return [tmp]
+
+def oglas_from_series(row: pd.Series):
     oglas = Oglas()
     oglas.udaljenost = row.at['udaljenost']
     oglas.kvadratura = row.at['kvadratura']
@@ -62,3 +87,13 @@ def oglas_from_row(row):
     oglas.broj_soba = row.at['broj_soba']
     oglas.spratnost = row.at['spratnost']
     return oglas
+
+def series_from_oglas(oglas: Oglas):
+    return pd.Series(data = {
+        'cena': 1,
+        'udaljenost': oglas.udaljenost,
+        'kvadratura': oglas.kvadratura,
+        'starost': oglas.starost,
+        'broj_soba': oglas.broj_soba,
+        'spratnost': oglas.spratnost
+    })

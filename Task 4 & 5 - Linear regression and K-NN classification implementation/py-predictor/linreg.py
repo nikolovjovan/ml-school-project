@@ -1,78 +1,153 @@
-from model import Oglas, get_data, get_normalized_data, min_max
+from model import Oglas, get_data, get_normalized_data, get_normalized_input, max
+import pandas as pd
 import numpy as np
-
-learned = False
+from sklearn.linear_model import LinearRegression, Ridge # Samo za validiranje performansi
+from sklearn.metrics import mean_squared_error
 
 # Hiperparametri modela
 
-alf = 1    # alfa = brzina ucenja
-lda = 5    # lambda - stepen regularizacije
+alf = 1.0 # alfa = brzina ucenja
+lda = 5.0 # lambda - stepen regularizacije
 iters = 1000 # broj iteracija
+training_frac = 0.9 # udeo podataka koji se koristi za treniranje modela
 
 # Parametri modela
 
 w_opt = np.ones([1, 6])
 
+# Jednom pokrecemo ucenje, nakon toga koristimo dobijene koeficijente
+
+learned = False
+
+train_err = 0.0
+test_err = 0.0
+
+regr = None # sklearn.linear_model.LinearRegression
+
+regr_train_err = 0.0
+regr_test_err = 0.0
+
+ridge = None # sklearn.linear_model.Ridge
+
+ridge_train_err = 0.0
+ridge_test_err = 0.0
+
 # Kretanje cene tokom optimizacije modela
 
-cost = np.zeros(iters)
+cost = None
+
+def split_data(df: pd.DataFrame):
+    df = pd.DataFrame(data = df) # iz nekog razloga DataFrame se pretvori u numpy.ndarray prilikom poziva...
+    training_set = df.sample(frac = training_frac)
+    return \
+        training_set.values, \
+        df.drop(training_set.index).values
 
 def compute_cost(X, y, w, lda):
-    # print('X', X)
-    # print('y', y)
-    # print('w', w)
-    # print('lda', lda)
-    # print('[X @ w.T - y] ^ 2', np.power(X @ w.T - y, 2))
-    # print('SUM([X @ w.T - y] ^ 2)', np.sum(np.power(X @ w.T - y, 2), axis = 0))
-    # print('w ^ 2', np.power(w, 2))
-    # print('SUM(w ^ 2)', np.sum(np.power(w, 2), axis = 0))
-    # print('lda @ SUM(w ^ 2)', lda @ np.sum(np.power(w, 2), axis = 0))
     return (np.sum(np.power(X @ w.T - y, 2)) + lda @ np.sum(np.power(w, 2), axis = 0)) / (2 * len(X))
 
 def gradient_descent(X, y, w, alf, lda, iters):
     cost = np.zeros(iters) # da bismo imali uvid u poboljsanje algoritma
-    # print('lda', lda)
-    # print('gd', 1 - alf * lda / len(X))
-    # print('X', X)
-    # print('y', y)
-    # print('w before', w)
-    # print('w', w * (1 - alf * lda / len(X)))
-    # print('X @ w.T', X @ w.T)
-    # print('X @ w.T - y', X @ w.T - y)
-    # print('X * (X @ w.T - y)', X * (X @ w.T - y))
-
-    # compute_cost(X, y, w, lda)
     for i in range(iters):
         w = w * (1 - alf * lda / len(X)) - (alf / len(X)) * np.sum(X * (X @ w.T - y), axis = 0)
         cost[i] = compute_cost(X, y, w, lda)
     return w, cost
 
-def learn():
-    global learned, w_opt
+def rmse(y_act, y_exp):
+    return np.average(np.sqrt(np.average((y_act - y_exp) ** 2, axis = 0)))
+
+def predict(X, w = None):
+    if w is None:
+        global w_opt
+        w = w_opt
+    y = np.zeros(len(X))
+    for i in range(len(X)):
+        y[i] = np.sum(w * X[i], axis = 1)[0]
+    return y
+
+def learn(norm = None):
+    global learned, w_opt, regr, ridge
+
+    # Ako je vec jednom izvrseno ucenje, vrati optimalne koeficijente...
+    #
     if learned:
-        return w_opt
-    data = get_normalized_data(min_max)
-    print(data)
-    print(get_data().max())
+        return w_opt, regr, ridge
+
+    # Normalizovanje podataka modifikovanom max normalizacijom (min-max gde je min podrazumevano 0)
+    # Koristi se ova normalizacija kako bi lakse mogli da normalizujemo ulazne podatke za predikciju...
+    #
+    data = get_normalized_data(max)
+
+    # Izdvajanje odlika (pre podele na train-test)
+    #
     X = data.iloc[:, 1:6]
+
+    # Dodavanje nulte odlike (vrednost 1) zbog jednostavnosti operacija sa vektorima
+    #
     ones = np.ones([X.shape[0], 1])
     X = np.concatenate((ones, X), axis = 1)
-    y = get_data().iloc[:, 0:1].values
+
+    # Izdvajanje ciljane promenljive (cene)
+    #
+    y = get_data().iloc[:, 0:1]
+
+    # Podela podataka za treniranje i testiranje
+    #
+    X_train, X_test = split_data(X)
+    y_train, y_test = split_data(y)
+
     global cost, alf, lda, iters
+
+    # Kreiranje lambda vektora da bi se izbegla regularizacija nulte odlike (konstante)
+    #
     lda_vec = np.full([1, X.shape[1]], lda)
     lda_vec[0][0] = 0 # nulti clan nije regularizovan
-    w_opt, cost = gradient_descent(X, y, w_opt, alf, lda_vec, iters)
-    return w_opt
+
+    # Pokretanje ucenja
+    #
+    w_opt, cost = gradient_descent(X_train, y_train, w_opt, alf, lda_vec, iters)
+
+    # Referentna implementacija linearne regresije (bez regularizacije)
+    #
+    regr = LinearRegression()
+    regr.fit(X_train, y_train)
+
+    # Referentna implementacija grebene regresije
+    #
+    ridge = Ridge(alpha = lda) # stepen regularizacije, sklearn to zove alpha
+    ridge.fit(X_train, y_train)
+
+    learned = True # YOLO (You Only LEARN Once)
+
+    # Testiranje na podacima za ucenje i testiranje zbog provere performansi
+    #
+    global train_err, test_err, regr_train_err, regr_test_err, ridge_train_err, ridge_test_err
+
+    train_err = rmse(predict(X_train), y_train)
+    test_err = rmse(predict(X_test), y_test)
+
+    print('Train err:', train_err, 'Test err:', test_err)
+    print('sklearn Train err:', mean_squared_error(predict(X_train), y_train, squared = False), 'sklearn Test err:', mean_squared_error(predict(X_test), y_test, squared = False))
+
+    regr_train_err = rmse(regr.predict(X_train), y_train)
+    regr_train_err = rmse(regr.predict(X_test), y_test)
+
+    print('Regr train err:', regr_train_err, 'Regr test err:', regr_test_err)
+    print('sklearn Regr train err:', mean_squared_error(regr.predict(X_train), y_train, squared = False), 'sklearn Regr test err:', mean_squared_error(regr.predict(X_test), y_test, squared = False))
+
+    ridge_train_err = rmse(ridge.predict(X_train), y_train)
+    ridge_test_err = rmse(ridge.predict(X_test), y_test)
+
+    print('Ridge train err:', ridge_train_err, 'Ridge trr:', ridge_test_err)
+    print('sklearn Ridge train err:', mean_squared_error(ridge.predict(X_train), y_train, squared = False), 'sklearn Ridge test err:', mean_squared_error(ridge.predict(X_test), y_test, squared = False))
+
+    return w_opt, regr, ridge
 
 def predict_price(oglas: Oglas):
-    w_opt = learn()
-    print(w_opt)
-    # global cost
-    # print(cost)
-    return \
-        w_opt[0][0] + \
-        w_opt[0][1] * oglas.udaljenost + \
-        w_opt[0][2] * oglas.kvadratura + \
-        w_opt[0][3] * oglas.starost + \
-        w_opt[0][4] * oglas.broj_soba + \
-        w_opt[0][5] * oglas.spratnost
+    norm = get_normalized_input(oglas)
+    w_opt, regr, ridge = learn(norm)
+    print('sklearn.linear_model.LinearRegression:', regr.predict(norm)[0][0])
+    print('sklearn.linear_model.Ridge:', ridge.predict(norm)[0][0])
+    price = predict(norm, w_opt)[0]
+    print('mine:', price)
+    return price

@@ -1,4 +1,4 @@
-from model import Oglas, get_data, oglas_from_row
+from model import Oglas, get_data, oglas_from_series
 from numpy import exp2, sqrt
 
 # Cenovne klase:
@@ -72,7 +72,7 @@ def predict_class(k: int, oglas: Oglas, dist_fn = manhattan):
         print(f'K = {k}')
     for i in range(nekretnine.shape[0]):
         row = nekretnine.iloc[i]
-        distances.append((dist_fn(oglas, oglas_from_row(row)), get_class(row.at['cena'])))
+        distances.append((dist_fn(oglas, oglas_from_series(row)), get_class(row.at['cena'])))
     distances.sort(key = lambda tup: tup[0])
     probabilities = [ 0, 0, 0, 0, 0 ] # init counts for each class to 0
     for i in range(k):
