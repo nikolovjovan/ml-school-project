@@ -8,6 +8,14 @@ from numpy import exp2, sqrt
 # 3: izmedju 150 000 EUR i 199 999 EUR
 # 4: 200 000 EUR ili vise
 
+cls_names = [
+    "manje od 49 999 EUR",
+    "izmedju 50 000 i 99 999 EUR",
+    "izmedju 100 000 i 149 999 EUR",
+    "izmedju 150 000 EUR i 199 999 EUR",
+    "200 000 EUR ili vise"
+]
+
 coef = Oglas()
 coef.udaljenost = 5.3
 coef.kvadratura = 0.6

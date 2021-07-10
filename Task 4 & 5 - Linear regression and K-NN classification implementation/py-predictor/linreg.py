@@ -19,22 +19,39 @@ w_opt = np.ones([1, 6])
 
 learned = False
 
+# Podeljeni dataset-ovi
+
+X_train = None
+y_train = None
+X_test = None
+y_test = None
+
+# Greske u train i test set-u
+
 train_err = 0.0
 test_err = 0.0
 
-regr = None # sklearn.linear_model.LinearRegression
+# sklearn.linear_model.LinearRegression
+
+regr = None 
+
+# Greske u train i test set-u
 
 regr_train_err = 0.0
 regr_test_err = 0.0
 
-ridge = None # sklearn.linear_model.Ridge
+# sklearn.linear_model.Ridge
+
+ridge = None 
+
+# Greske u train i test set-u
 
 ridge_train_err = 0.0
 ridge_test_err = 0.0
 
 # Kretanje cene tokom optimizacije modela
 
-cost = None
+cost = np.zeros(iters)
 
 def split_data(df: pd.DataFrame):
     df = pd.DataFrame(data = df) # iz nekog razloga DataFrame se pretvori u numpy.ndarray prilikom poziva...
@@ -43,14 +60,60 @@ def split_data(df: pd.DataFrame):
         training_set.values, \
         df.drop(training_set.index).values
 
+def prepare_datasets():
+    global X_train, y_train, X_test, y_test
+    if X_train is None or y_train is None or X_test is None or y_test is None:
+        # Normalizovanje podataka modifikovanom max normalizacijom (min-max gde je min podrazumevano 0)
+        # Koristi se ova normalizacija kako bi lakse mogli da normalizujemo ulazne podatke za predikciju...
+        #
+        data = get_data() #get_normalized_data(max)
+
+        # Izdvajanje odlika (pre podele na train-test)
+        #
+        X = data.iloc[:, 1:6]
+
+        # Dodavanje nulte odlike (vrednost 1) zbog jednostavnosti operacija sa vektorima
+        #
+        ones = np.ones([X.shape[0], 1])
+        X = np.concatenate((ones, X), axis = 1)
+
+        # Izdvajanje ciljane promenljive (cene)
+        #
+        y = get_data().iloc[:, 0:1]
+
+        # Podela podataka za treniranje i testiranje
+        #
+        X_train, X_test = split_data(X)
+        y_train, y_test = split_data(y)
+
 def compute_cost(X, y, w, lda):
+    # print('X', X)
+    # print('y', y)
+    # print('lda', lda)
+    # print('[X @ w.T - y] ^ 2', np.power(X @ w.T - y, 2))
+    # print('SUM([X @ w.T - y] ^ 2)', np.sum(np.power(X @ w.T - y, 2), axis = 0))
+    # print('w ^ 2', np.power(w, 2))
+    # print('SUM(w ^ 2)', np.sum(np.power(w, 2), axis = 0))
+    # print('lda @ SUM(w ^ 2)', lda @ np.sum(np.power(w, 2), axis = 0))
     return (np.sum(np.power(X @ w.T - y, 2)) + lda @ np.sum(np.power(w, 2), axis = 0)) / (2 * len(X))
 
 def gradient_descent(X, y, w, alf, lda, iters):
     cost = np.zeros(iters) # da bismo imali uvid u poboljsanje algoritma
+    print('w0', w)
     for i in range(iters):
-        w = w * (1 - alf * lda / len(X)) - (alf / len(X)) * np.sum(X * (X @ w.T - y), axis = 0)
+        # print('w.T', w.T)
+        # print('X @ w.T', X @ w.T)
+        # print('X @ w.T - y', X @ w.T - y)
+        # print('(X @ w.T - y) * X', (X @ w.T - y) * X)
+        # print('SUM((X @ w.T - y) * X)', np.sum(X * (X @ w.T - y), axis = 0))
+        # print('X * (X @ w.T - y)', X * (X @ w.T - y))
+        # print('SUM(X * (X @ w.T - y))', np.sum(X * (X @ w.T - y), axis = 0))
+        w = w * (1 - alf * lda / len(X)) - (alf / len(X)) * np.sum((X @ w.T - y) * X, axis = 0)
+        # print('w', w)
+        # print('compute_cost')
+        # print()
         cost[i] = compute_cost(X, y, w, lda)
+        # print()
     return w, cost
 
 def rmse(y_act, y_exp):
@@ -65,7 +128,7 @@ def predict(X, w = None):
         y[i] = np.sum(w * X[i], axis = 1)[0]
     return y
 
-def learn(norm = None):
+def learn():
     global learned, w_opt, regr, ridge
 
     # Ako je vec jednom izvrseno ucenje, vrati optimalne koeficijente...
@@ -73,49 +136,32 @@ def learn(norm = None):
     if learned:
         return w_opt, regr, ridge
 
-    # Normalizovanje podataka modifikovanom max normalizacijom (min-max gde je min podrazumevano 0)
-    # Koristi se ova normalizacija kako bi lakse mogli da normalizujemo ulazne podatke za predikciju...
+    # Skupovi podataka se pripremaju samo jednom...
     #
-    data = get_normalized_data(max)
+    prepare_datasets()
 
-    # Izdvajanje odlika (pre podele na train-test)
-    #
-    X = data.iloc[:, 1:6]
-
-    # Dodavanje nulte odlike (vrednost 1) zbog jednostavnosti operacija sa vektorima
-    #
-    ones = np.ones([X.shape[0], 1])
-    X = np.concatenate((ones, X), axis = 1)
-
-    # Izdvajanje ciljane promenljive (cene)
-    #
-    y = get_data().iloc[:, 0:1]
-
-    # Podela podataka za treniranje i testiranje
-    #
-    X_train, X_test = split_data(X)
-    y_train, y_test = split_data(y)
-
-    global cost, alf, lda, iters
+    global cost, alf, lda, iters, X_train, y_train, X_test, y_test
 
     # Kreiranje lambda vektora da bi se izbegla regularizacija nulte odlike (konstante)
     #
-    lda_vec = np.full([1, X.shape[1]], lda)
+    lda_vec = np.full([1, X_train.shape[1]], lda)
     lda_vec[0][0] = 0 # nulti clan nije regularizovan
 
     # Pokretanje ucenja
     #
-    w_opt, cost = gradient_descent(X_train, y_train, w_opt, alf, lda_vec, iters)
+    # w_opt, cost = gradient_descent(X_train, y_train, w_opt, alf, lda_vec, iters)
 
     # Referentna implementacija linearne regresije (bez regularizacije)
     #
     regr = LinearRegression()
     regr.fit(X_train, y_train)
+    print('LinearRegression coefficients:', regr.coef_)
 
     # Referentna implementacija grebene regresije
     #
     ridge = Ridge(alpha = lda) # stepen regularizacije, sklearn to zove alpha
     ridge.fit(X_train, y_train)
+    print('Ridge coefficients:', ridge.coef_)
 
     learned = True # YOLO (You Only LEARN Once)
 
@@ -144,10 +190,11 @@ def learn(norm = None):
     return w_opt, regr, ridge
 
 def predict_price(oglas: Oglas):
-    norm = get_normalized_input(oglas)
-    w_opt, regr, ridge = learn(norm)
+    w_opt, regr, ridge = learn()
+    norm = get_normalized_input(oglas, normalize = lambda _: (0, 1, 0))
+    print("Normalized input:", norm[0])
     print('sklearn.linear_model.LinearRegression:', regr.predict(norm)[0][0])
     print('sklearn.linear_model.Ridge:', ridge.predict(norm)[0][0])
     price = predict(norm, w_opt)[0]
-    print('mine:', price)
+    print('My implementation:', price)
     return price

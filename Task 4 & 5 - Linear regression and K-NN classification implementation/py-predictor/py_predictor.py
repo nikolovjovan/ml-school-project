@@ -1,11 +1,13 @@
-from tkinter import *
 from model import Oglas, import_data
 import linreg as lr
-from linreg import predict_price, iters
-from knn import calculate_k, chebyshev, euclid, manhattan, most_probable_class, predict_class
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from linreg import predict_price, iters, prepare_datasets
+from knn import cls_names, calculate_k, chebyshev, euclid, manhattan, most_probable_class, predict_class
+
+from tkinter import *
 import numpy as np
+import pandas as pd
+import seaborn as sb
+import matplotlib.pyplot as plt
 
 def create_oglas():
     oglas = Oglas()
@@ -16,35 +18,85 @@ def create_oglas():
     oglas.spratnost = int(spratnost.get()) if len(spratnost.get()) > 0 else 0
     return oglas
 
+def plot_regression_lines(x, y, w, data, color, label, **kwargs):
+    x_max = x.max()
+    x_axis = np.arange(0, x_max, x_max / 10000)
+    a = w[data.columns.get_loc(x.name)]
+    b = w[0]
+    line = lambda x: a * x + b
+    # Ne pokrece se regresija za pojedinacne odlike vec se na osnovu regresije za sve odlike iscrtavaju uocene zavisnosti
+    # Potrebno je skaliranje kako bi se rezultati mogli uociti na grafiku
+    #
+    a *= 30
+    y_axis = line(x_axis)
+    ax = plt.gca()
+    ax.plot(x_axis, y_axis, color = color, label = label)
+    ax.legend()
+
+def pairplot(X, y, training = True):
+    dfx = pd.DataFrame(X, columns = [
+        'visak',
+        'udaljenost',
+        'kvadratura',
+        'starost',
+        'broj_soba',
+        'spratnost'
+    ])
+    dfy = pd.DataFrame(y, columns = ['cena'])
+
+    data = pd.concat([dfx, dfy], axis = 1)
+
+    g = sb.pairplot(
+        data,
+        x_vars = [
+            'udaljenost',
+            'kvadratura',
+            'starost',
+            'broj_soba',
+            'spratnost'
+        ],
+        y_vars = 'cena',
+        kind = 'scatter',
+        plot_kws = { "s" : 5 })
+
+    g.fig.suptitle(("Training" if training else "Testing") + " set")
+    g.fig.canvas.manager.set_window_title("Grafik zavisnosti cene od odlika")
+
+    if lr.learned:
+        g.map(plot_regression_lines, w = lr.w_opt[0], data = data, color = "tab:green", label = "My regression")
+        g.map(plot_regression_lines, w = lr.regr.coef_[0], data = data, color = "tab:orange", label = "sklearn LinearRegression")
+        g.map(plot_regression_lines, w = lr.ridge.coef_[0], data = data, color = "tab:red", label = "sklearn Ridge")
+        g.fig.legend(handles = g._legend_data.values(), labels = g._legend_data.keys(), loc = "upper right")
+
+    plt.tight_layout()
+    plt.ion()
+    plt.show()
+
 def get_class_name(cls_id):
-    if not hasattr(get_class_name, "cls_names"):
-        get_class_name.cls_names = [
-            "manje od 49 999 EUR",
-            "izmedju 50 000 i 99 999 EUR",
-            "izmedju 100 000 i 149 999 EUR",
-            "izmedju 150 000 EUR i 199 999 EUR",
-            "200 000 EUR ili vise"
-        ]
-    return get_class_name.cls_names[cls_id] if cls_id >= 0 and cls_id < 5 else "nevalidna klasa"
+    return cls_names[cls_id] if cls_id >= 0 and cls_id < 5 else "nevalidna klasa"
+
+def show_plots():
+    prepare_datasets()
+    pairplot(lr.X_train, lr.y_train)
+    pairplot(lr.X_test, lr.y_test, False)
 
 def exec_lin_reg():
     rezultatframe.grid_remove()
-    verovatnocaframe.grid_remove()
     oglas = create_oglas()
-    predvidjena_cena = predict_price(oglas)
-    
-    fig = Figure(figsize = (6, 6))
+
+    rezultat.set(f"Predvidjena cena: {predict_price(oglas):.2f} EUR")
+    rezultatframe.grid()
+
+    fig = plt.figure()
+    fig.canvas.manager.set_window_title("Grafik zavisnosti greske modela od trenutne iteracije")
     ax = fig.add_subplot(111)
     ax.plot(np.arange(iters), lr.cost, 'r')
-    ax.set_xlabel('Iterations')
-    ax.set_ylabel('Cost')
-    ax.set_title('Error vs. Training Epoch')
+    ax.set_xlabel('Broj iteracija')
+    ax.set_ylabel('Greska modela')
 
-    canvas = FigureCanvasTkAgg(fig, master = window)
-    canvas.get_tk_widget().grid(column = 0, row = 5)
-
-    rezultat.set(f"Predvidjena cena: {predvidjena_cena:.2f} EUR")
-    rezultatframe.grid()
+    plt.tight_layout()
+    plt.ion()
+    plt.show()
 
 def get_dist_fn(dist_fn_name):
     if dist_fn_name == "Euclid":
@@ -58,20 +110,31 @@ def get_dist_fn(dist_fn_name):
 
 def exec_knn():
     rezultatframe.grid_remove()
-    verovatnocaframe.grid_remove()
     oglas = create_oglas()
+
     verovatnoce = predict_class(
         int(k.get()) if len(k.get()) > 0 else calculate_k(),
         oglas,
         get_dist_fn(fja_rastojanja.get()))
+
     predvidjena_klasa = most_probable_class(verovatnoce)
     rezultat.set(f"Predvidjena klasa: {predvidjena_klasa} - {get_class_name(predvidjena_klasa)}")
-    verovatnoce_str = ""
-    for i in range(len(verovatnoce)):
-        verovatnoce_str += f"{(verovatnoce[i] * 100):.2f}%" + ("\n" if i < len(verovatnoce) - 1 else "")
-    verovatnoce_klasa.set(verovatnoce_str)
     rezultatframe.grid()
-    verovatnocaframe.grid()
+
+    fig = plt.figure()
+    fig.canvas.manager.set_window_title("Verovatnoce cenovnih klasa")
+    ax = fig.add_subplot(111)
+    verovatnoce = [verovatnoca * 100 for verovatnoca in verovatnoce]
+    colors = np.full(len(verovatnoce), "tab:blue")
+    colors[np.argmax(verovatnoce)] = "tab:red"
+    ax.bar(cls_names, verovatnoce, color = colors)
+    ax.set_ylim([0, 100])
+    ax.set_xticklabels(cls_names, rotation = 45, rotation_mode = "anchor", ha = "right")
+    ax.set_ylabel('Verovatnoca [%]')
+
+    plt.tight_layout()
+    plt.ion()
+    plt.show()
 
 # Importovanje dataset-a
 
@@ -81,7 +144,7 @@ import_data()
 
 window = Tk()
 window.title("Prediktor cene/cenovne klase nekretnine")
-window.minsize(350, 400)
+window.minsize(350, 250)
 window.wm_resizable(False, False)
 
 # Dodavanje uputstva
@@ -128,17 +191,21 @@ fja_rastojanja = StringVar()
 fja_rastojanja.set("Manhattan")
 OptionMenu(adframe, fja_rastojanja, "Manhattan", *["Euclid", "Chebyshev"]).grid(column = 1, row = 6, sticky = EW)
 
+# Dodavanje dugmeta za crtanje grafika
+
+Button(window, text = "Iscrtaj grafike zavisnosti", command = show_plots).grid(column = 0, row = 2)
+
 # Dodavanje dugmica za pokretanje regresije/klasifikacije
 
 btnframe = Frame(window)
-btnframe.grid(column = 0, row = 2)
+btnframe.grid(column = 0, row = 3)
 Button(btnframe, text = "Linearna regresija", command = exec_lin_reg).grid(column = 0, row = 0)
 Button(btnframe, text = "K-NN klasifikacija", command = exec_knn).grid(column = 1, row = 0)
 
 # Dodavanje rezultata linearne regresije/K-NN klasifikacije
 
 rezultatframe = Frame(window)
-rezultatframe.grid(column = 0, row = 3)
+rezultatframe.grid(column = 0, row = 4)
 rezultat_info = StringVar()
 rezultat_info.set("")
 Label(rezultatframe, textvariable = rezultat_info).grid(column = 0, row = 0)
@@ -146,19 +213,6 @@ rezultat = StringVar()
 rezultat.set("")
 Label(rezultatframe, textvariable =  rezultat).grid(column = 1, row = 0)
 rezultatframe.grid_remove()
-
-verovatnocaframe = Frame(window)
-verovatnocaframe.grid(column = 0, row = 4)
-verovatnoca_info = StringVar()
-verovatnoca_info_str = ""
-for i in range(5):
-    verovatnoca_info_str += f"{i}: {get_class_name(i)} = " + ("\n" if i < 4 else "")
-verovatnoca_info.set(verovatnoca_info_str)
-Label(verovatnocaframe, textvariable = verovatnoca_info, justify = RIGHT).grid(column = 0, row = 0)
-verovatnoce_klasa = StringVar()
-verovatnoce_klasa.set("")
-Label(verovatnocaframe, textvariable =  verovatnoce_klasa, font = ('Segoe UI', 9, 'bold'), justify = LEFT).grid(column = 1, row = 0)
-verovatnocaframe.grid_remove()
 
 # Pokretanje glavne petlje aplikacije
 
