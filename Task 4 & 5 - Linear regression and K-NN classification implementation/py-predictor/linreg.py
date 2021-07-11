@@ -1,4 +1,4 @@
-from model import Oglas, get_data, get_normalized_data, get_normalized_input, max
+from model import Oglas, get_data, get_normalized_data, get_normalized_input, max, normalize_data
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge # Samo za validiranje performansi
@@ -6,8 +6,8 @@ from sklearn.metrics import mean_squared_error
 
 # Hiperparametri modela
 
-alf = 1.0 # alfa = brzina ucenja
-lda = 5.0 # lambda - stepen regularizacije
+alf = 1 # alfa = brzina ucenja
+lda = 0 # lambda - stepen regularizacije
 iters = 1000 # broj iteracija
 training_frac = 0.9 # udeo podataka koji se koristi za treniranje modela
 
@@ -21,8 +21,10 @@ learned = False
 
 # Podeljeni dataset-ovi
 
+X_train_nn = None
 X_train = None
 y_train = None
+X_test_nn = None
 X_test = None
 y_test = None
 
@@ -61,12 +63,21 @@ def split_data(df: pd.DataFrame):
         df.drop(training_set.index).values
 
 def prepare_datasets():
-    global X_train, y_train, X_test, y_test
-    if X_train is None or y_train is None or X_test is None or y_test is None:
+    global X_train_nn, X_train, y_train, X_test_nn, X_test, y_test
+    if X_train_nn is None or X_train is None or y_train is None or X_test_nn is None or X_test is None or y_test is None:
         # Normalizovanje podataka modifikovanom max normalizacijom (min-max gde je min podrazumevano 0)
         # Koristi se ova normalizacija kako bi lakse mogli da normalizujemo ulazne podatke za predikciju...
         #
-        data = get_data() #get_normalized_data(max)
+        data = get_data()
+        data = data.loc[(data["cena"] / data["kvadratura"] >= 500) & (data["cena"] / data["kvadratura"] <= 5000)]
+        data = data.loc[(data["cena"] >= 30000) & (data["cena"] <= 300000)]
+        # data = data.loc[data["broj_soba"] <= 5]
+
+        # Izdvajanje ciljane promenljive (cene) iz nenormalizovanih podataka
+        #
+        y = data.iloc[:, 0:1]
+
+        print("Broj filtriranih podataka:", data.shape[0])
 
         # Izdvajanje odlika (pre podele na train-test)
         #
@@ -77,14 +88,15 @@ def prepare_datasets():
         ones = np.ones([X.shape[0], 1])
         X = np.concatenate((ones, X), axis = 1)
 
-        # Izdvajanje ciljane promenljive (cene)
-        #
-        y = get_data().iloc[:, 0:1]
-
         # Podela podataka za treniranje i testiranje
         #
-        X_train, X_test = split_data(X)
+        X_train_nn, X_test_nn = split_data(X)
         y_train, y_test = split_data(y)
+
+        # Normalizovanje podataka max normalizacijom (0, 1)
+        #
+        X_train = normalize_data(X_train_nn, max)
+        X_test = normalize_data(X_test_nn, max)
 
 def compute_cost(X, y, w, lda):
     # print('X', X)
@@ -99,20 +111,23 @@ def compute_cost(X, y, w, lda):
 
 def gradient_descent(X, y, w, alf, lda, iters):
     cost = np.zeros(iters) # da bismo imali uvid u poboljsanje algoritma
-    print('w0', w)
+    # print('w0', w)
+    # print('cost0', compute_cost(X, y, w, lda))
+    # print('X[0]', X[0], 'y[0]', y[0])
     for i in range(iters):
         # print('w.T', w.T)
         # print('X @ w.T', X @ w.T)
         # print('X @ w.T - y', X @ w.T - y)
         # print('(X @ w.T - y) * X', (X @ w.T - y) * X)
+        # print('alf / len(X)', alf / len(X))
         # print('SUM((X @ w.T - y) * X)', np.sum(X * (X @ w.T - y), axis = 0))
-        # print('X * (X @ w.T - y)', X * (X @ w.T - y))
-        # print('SUM(X * (X @ w.T - y))', np.sum(X * (X @ w.T - y), axis = 0))
-        w = w * (1 - alf * lda / len(X)) - (alf / len(X)) * np.sum((X @ w.T - y) * X, axis = 0)
+        # print('(alf / len(X)) * SUM((X @ w.T - y) * X)', (alf / len(X)) * np.sum(X * (X @ w.T - y), axis = 0))
+        w = w * (1 - alf * lda / len(X)) - (alf / len(X)) * np.sum(X * (X @ w.T - y), axis = 0)
         # print('w', w)
         # print('compute_cost')
         # print()
         cost[i] = compute_cost(X, y, w, lda)
+        # print(f"cost[{i}] = {cost[i]}")
         # print()
     return w, cost
 
@@ -150,6 +165,7 @@ def learn():
     # Pokretanje ucenja
     #
     w_opt, cost = gradient_descent(X_train, y_train, w_opt, alf, lda_vec, iters)
+    print('My coefficients:', w_opt)
 
     # Referentna implementacija linearne regresije (bez regularizacije)
     #
@@ -191,7 +207,7 @@ def learn():
 
 def predict_price(oglas: Oglas):
     w_opt, regr, ridge = learn()
-    norm = get_normalized_input(oglas, normalize = lambda _: (0, 1, 0))
+    norm = get_normalized_input(oglas) #, normalize = lambda _: (0, 1, 0))
     print("Normalized input:", norm[0])
     print('sklearn.linear_model.LinearRegression:', regr.predict(norm)[0][0])
     print('sklearn.linear_model.Ridge:', ridge.predict(norm)[0][0])

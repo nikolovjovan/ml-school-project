@@ -77,9 +77,9 @@ def pairplot(X, y, training = True):
 
 def show_plots():
     prepare_datasets()
-    pairplot(np.concatenate((lr.X_train, lr.X_test), axis = 0), np.concatenate((lr.y_train, lr.y_test), axis = 0), None)
-    pairplot(lr.X_train, lr.y_train)
-    pairplot(lr.X_test, lr.y_test, False)
+    pairplot(np.concatenate((lr.X_train_nn, lr.X_test_nn), axis = 0), np.concatenate((lr.y_train, lr.y_test), axis = 0), None)
+    pairplot(lr.X_train_nn, lr.y_train)
+    pairplot(lr.X_test_nn, lr.y_test, False)
 
     if lr.learned:
         fig = plt.figure()

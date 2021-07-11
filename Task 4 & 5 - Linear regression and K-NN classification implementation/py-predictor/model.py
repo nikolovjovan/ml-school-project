@@ -61,12 +61,16 @@ def standardization(data: pd.DataFrame):
 normalize_fn = min_max
 nekretnine_normalized = pd.DataFrame()
 
-def get_normalized_data(normalize = min_max):
+def normalize_data(data, normalize = min_max):
     global normalize_fn
+    normalize_fn = normalize
+    _, _, data_normalized = normalize(data)
+    return data_normalized
+
+def get_normalized_data(normalize = min_max):
     global nekretnine_normalized
-    if nekretnine_normalized.empty or normalize_fn != normalize:
-        normalize_fn = normalize
-        _, _, nekretnine_normalized = normalize(get_data())
+    if nekretnine_normalized.empty:
+        _, _, nekretnine_normalized = normalize_data(get_data(), normalize)
     return nekretnine_normalized
 
 def get_normalized_input(oglas: Oglas, normalize = None):
