@@ -149,7 +149,7 @@ def learn():
 
     # Pokretanje ucenja
     #
-    # w_opt, cost = gradient_descent(X_train, y_train, w_opt, alf, lda_vec, iters)
+    w_opt, cost = gradient_descent(X_train, y_train, w_opt, alf, lda_vec, iters)
 
     # Referentna implementacija linearne regresije (bez regularizacije)
     #

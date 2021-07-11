@@ -17,11 +17,11 @@ cls_names = [
 ]
 
 coef = Oglas()
-coef.udaljenost = 5.3
-coef.kvadratura = 0.6
-coef.starost = 0.7
-coef.broj_soba = 1.3
-coef.spratnost = 0.5
+coef.udaljenost = 1.0
+coef.kvadratura = 1.0
+coef.starost = 1.0
+coef.broj_soba = 1.0
+coef.spratnost = 1.0
 
 def calculate_k():
     return int(sqrt(get_data().shape[0]))
@@ -80,11 +80,16 @@ def predict_class(k: int, oglas: Oglas, dist_fn = manhattan):
         print(f'K = {k}')
     for i in range(nekretnine.shape[0]):
         row = nekretnine.iloc[i]
-        distances.append((dist_fn(oglas, oglas_from_series(row)), get_class(row.at['cena'])))
+        distances.append((dist_fn(oglas, oglas_from_series(row)), row.at['cena']))
     distances.sort(key = lambda tup: tup[0])
     probabilities = [ 0, 0, 0, 0, 0 ] # init counts for each class to 0
+    avg_cost = 0
     for i in range(k):
-        probabilities[distances[i][1]] += 1
-    for i in range(len(probabilities)):
-        probabilities[i] /= k
-    return probabilities
+        probabilities[get_class(distances[i][1])] += 1
+        avg_cost += distances[i][1]
+    probabilities = [p / k for p in probabilities]
+    avg_cost /= k
+    return (
+        probabilities,
+        avg_cost
+    )
